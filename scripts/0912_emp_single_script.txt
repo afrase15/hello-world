@@ -1,0 +1,38 @@
+#!/bin/sh
+#SBATCH --job-name=esakows1_152133_plate_2
+#SBATCH --time=72:00:00
+
+#data folder include barcodes.fastq.gz sequences.fastq.gz (R1 or forward reads) for single end. 
+
+
+PREFIX=EMPSingleEndSequences_full
+DATA=/home-1/afrase15@jhu.edu/scratch/anf_scratch/esakows1_152133_plate_2/EMPSingleEndSequences
+METADATA=/home-1/afrase15@jhu.edu/scratch/anf_scratch/esakows1_152133_plate_2/runoff_mapping.txt
+
+ml qiime2/2018.8
+export LC_ALL=en_US.utf-8
+export LANG=en_US.utf-8
+export TMPDIR='/scratch/users/afrase15@jhu.edu/tmp'
+
+#echo the time for each
+echo "Starting qiime2 analysis"
+date
+#import the demultiplexed data
+echo "Starting import"
+date
+qiime tools import --type EMPSingleEndSequences --input-path $DATA --output-path ${PREFIX}.qza
+
+#demultiplexing data
+echo "Starting demux"
+date
+qiime demux emp-single --i-seqs ${PREFIX}.qza --m-barcodes-file $METADATA --m-barcodes-column BarcodeSequence --o-per-sample-sequences ${PREFIX}_demux.qza
+qiime demux summarize --i-data ${PREFIX}_demux.qza --o-visualization ${PREFIX}_demux.qzv
+
+#use dada2 to remove sequencing errors
+echo $TMPDIR
+echo "Starting dada2"
+date
+qiime dada2 denoise-single --i-demultiplexed-seqs ${PREFIX}_demux.qza --p-trim-left 23 --p-trunc-len 125 --o-representative-sequences ${PREFIX}_reps.qza --o-table ${PREFIX}_dada2.qza --o-denoising-stats ${PREFIX}_stats-dada2.qza --p-min-fold-parent-over-abundance 10
+
+echo "End of script"
+date
